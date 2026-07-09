@@ -8,8 +8,29 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL, // e.g. https://amazon-clone-xyz.vercel.app
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
+
+// Health check (keeps Render awake / used by uptime monitors)
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 
 // Connect to MongoDB
 mongoose

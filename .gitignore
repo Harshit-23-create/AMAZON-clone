@@ -1,5 +1,10 @@
 node_modules
 .env
+.env.local
 .DS_Store
 dist
 build
+
+# Allow example/production templates to be committed
+!.env.example
+!.env.production

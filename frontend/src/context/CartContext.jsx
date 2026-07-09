@@ -2,13 +2,15 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const CartContext = createContext();
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
 
   const addToCart = useCallback(async (product) => {
     try {
-      const res = await fetch('http://localhost:5000/api/cart', {
+      const res = await fetch(`${API_URL}/api/cart`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product._id }),
@@ -25,7 +27,7 @@ export function CartProvider({ children }) {
 
   const removeFromCart = useCallback(async (productId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/cart/${productId}`, {
+      const res = await fetch(`${API_URL}/api/cart/${productId}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -37,7 +39,7 @@ export function CartProvider({ children }) {
 
   const updateQuantity = useCallback(async (productId, quantity) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/cart/${productId}`, {
+      const res = await fetch(`${API_URL}/api/cart/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
