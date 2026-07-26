@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -8,14 +8,26 @@ import Footer from './components/Footer';
 import './index.css';
 
 function App() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
   return (
     <CartProvider>
       <div className="app">
-        <Navbar />
+        <Navbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+        />
         <CartDrawer />
         <main>
           <Hero />
-          <ProductGrid />
+          <ProductGrid
+            searchTerm={searchTerm}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+          />
         </main>
         <Footer />
       </div>
@@ -24,3 +36,4 @@ function App() {
 }
 
 export default App;
+

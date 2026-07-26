@@ -2,7 +2,10 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const CartContext = createContext();
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL !== undefined
+  ? import.meta.env.VITE_API_URL
+  : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : '');
+
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);

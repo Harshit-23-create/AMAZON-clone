@@ -2,67 +2,164 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Product = require('../database/models/Product');
+let Product;
+try {
+  Product = require('../database/models/Product');
+} catch (e) {
+  Product = null;
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  process.env.FRONTEND_URL, // e.g. https://amazon-clone-xyz.vercel.app
-].filter(Boolean);
+// Default fallback products array for zero-downtime resume previews
+const defaultProducts = [
+  {
+    _id: "650000000000000000000001",
+    name: "Men's Casual Wear",
+    description: "Comfortable and stylish clothes for everyday use. Premium cotton blend with modern fit.",
+    imageUrl: "box1_image.jpg",
+    price: 29.99,
+    category: "Clothes",
+    rating: 4.3,
+    reviews: 1248,
+  },
+  {
+    _id: "650000000000000000000002",
+    name: "Health & Personal Care Essentials",
+    description: "Top health and personal care items for a healthy lifestyle. Trusted by millions.",
+    imageUrl: "box2_image.jpg",
+    price: 15.49,
+    category: "Health",
+    rating: 4.5,
+    reviews: 3892,
+  },
+  {
+    _id: "650000000000000000000003",
+    name: "Modern Furniture",
+    description: "Decorate your home with elegant, contemporary furniture. Built to last.",
+    imageUrl: "box3_image.jpg",
+    price: 120.00,
+    category: "Furniture",
+    rating: 4.1,
+    reviews: 567,
+  },
+  {
+    _id: "650000000000000000000004",
+    name: "Latest Electronics",
+    description: "Cutting-edge gadgets and electronics for the modern era. Fast and powerful.",
+    imageUrl: "box4_image.jpg",
+    price: 199.99,
+    category: "Electronics",
+    rating: 4.7,
+    reviews: 8210,
+  },
+  {
+    _id: "650000000000000000000005",
+    name: "Beauty & Makeup Kits",
+    description: "Premium beauty and makeup essentials. Glow up with the best.",
+    imageUrl: "box5_image.jpg",
+    price: 45.00,
+    category: "Beauty",
+    rating: 4.4,
+    reviews: 2103,
+  },
+  {
+    _id: "650000000000000000000006",
+    name: "Pet Supplies",
+    description: "Everything your furry friends need. Healthy, happy, and playful.",
+    imageUrl: "box6_image.jpg",
+    price: 25.00,
+    category: "Pets",
+    rating: 4.6,
+    reviews: 987,
+  },
+  {
+    _id: "650000000000000000000007",
+    name: "Arts & Crafts",
+    description: "Get creative with our wide range of craft supplies. Spark your imagination.",
+    imageUrl: "box7_image.jpg",
+    price: 18.50,
+    category: "Crafts",
+    rating: 4.2,
+    reviews: 431,
+  },
+  {
+    _id: "650000000000000000000008",
+    name: "Fashion Trends",
+    description: "Discover the latest fashion trends. Stay ahead of the curve.",
+    imageUrl: "box8_image.jpg",
+    price: 55.00,
+    category: "Fashion",
+    rating: 4.5,
+    reviews: 1754,
+  },
+];
 
+// Dynamic CORS configuration
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      // Always allow requests for API access
+      callback(null, true);
     },
     credentials: true,
   })
 );
 app.use(express.json());
 
-// Health check (keeps Render awake / used by uptime monitors)
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+// Connect to MongoDB if MONGODB_URI is provided
+if (process.env.MONGODB_URI) {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch((err) => console.error('⚠️ MongoDB connection warning (using fallback data):', err.message));
+} else {
+  console.log('ℹ️ MONGODB_URI not provided. Running with memory fallback data.');
+}
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err.message));
+// Helper to check DB readiness
+const isDbConnected = () => mongoose.connection.readyState === 1;
 
 // ─── PRODUCT ROUTES ────────────────────────────────────────────────────────────
 
 // GET all products
 app.get('/api/products', async (req, res) => {
   try {
-    const products = await Product.find();
-    res.json(products);
+    if (isDbConnected() && Product) {
+      const products = await Product.find();
+      if (products && products.length > 0) {
+        return res.json(products);
+      }
+    }
+    res.json(defaultProducts);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch products' });
+    res.json(defaultProducts);
   }
 });
 
 // GET single product by ID
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
+    if (isDbConnected() && Product) {
+      const product = await Product.findById(req.params.id);
+      if (product) return res.json(product);
+    }
+    const fallback = defaultProducts.find((p) => p._id === req.params.id);
+    if (!fallback) return res.status(404).json({ error: 'Product not found' });
+    res.json(fallback);
   } catch (error) {
+    const fallback = defaultProducts.find((p) => p._id === req.params.id);
+    if (fallback) return res.json(fallback);
     res.status(500).json({ error: 'Failed to fetch product' });
   }
 });
 
 // ─── CART ROUTES ───────────────────────────────────────────────────────────────
-// In-memory cart for demonstration (a real app would use sessions/DB)
 let cart = [];
 
 // GET cart items
@@ -74,7 +171,15 @@ app.get('/api/cart', (req, res) => {
 app.post('/api/cart', async (req, res) => {
   try {
     const { productId, quantity = 1 } = req.body;
-    const product = await Product.findById(productId);
+    let product = null;
+    
+    if (isDbConnected() && Product) {
+      product = await Product.findById(productId).catch(() => null);
+    }
+    if (!product) {
+      product = defaultProducts.find((p) => p._id === productId);
+    }
+    
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
     const existingItem = cart.find((item) => item.productId === productId);
@@ -116,7 +221,12 @@ app.put('/api/cart/:productId', (req, res) => {
   res.json({ message: 'Cart updated', cart });
 });
 
-// ─── START SERVER ──────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// Start server if executed directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
+

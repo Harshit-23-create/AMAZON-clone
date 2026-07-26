@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 
-function Navbar() {
+function Navbar({ searchTerm = '', onSearchChange, selectedCategory = 'All', onCategoryChange }) {
   const { totalItems, setCartOpen } = useCart();
   const [searchFocused, setSearchFocused] = useState(false);
 
@@ -25,29 +25,40 @@ function Navbar() {
 
         {/* Search */}
         <div className={`nav-search ${searchFocused ? 'focused' : ''}`}>
-          <select className="search-select" aria-label="Search category">
-            <option>All</option>
-            <option>Clothes</option>
-            <option>Electronics</option>
-            <option>Furniture</option>
-            <option>Health</option>
-            <option>Beauty</option>
-            <option>Pets</option>
-            <option>Crafts</option>
-            <option>Fashion</option>
+          <select 
+            className="search-select" 
+            aria-label="Search category"
+            value={selectedCategory}
+            onChange={(e) => onCategoryChange && onCategoryChange(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="Clothes">Clothes</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Health">Health</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Pets">Pets</option>
+            <option value="Crafts">Crafts</option>
+            <option value="Fashion">Fashion</option>
           </select>
           <input
             type="search"
             placeholder="Search Amazon.in"
             className="search-input"
+            value={searchTerm}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             aria-label="Search"
           />
-          <button className="search-btn" aria-label="Search">
+          <button className="search-btn" aria-label="Search" onClick={() => {
+            const el = document.getElementById('products');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}>
             <i className="fa-solid fa-magnifying-glass" />
           </button>
         </div>
+
 
         {/* Right actions */}
         <div className="nav-actions">

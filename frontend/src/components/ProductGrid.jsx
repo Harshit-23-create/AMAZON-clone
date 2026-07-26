@@ -117,22 +117,40 @@ function ProductCard({ product, index }) {
   );
 }
 
-function ProductGrid() {
+const API_URL = import.meta.env.VITE_API_URL !== undefined
+  ? import.meta.env.VITE_API_URL
+  : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : '');
+
+function ProductGrid({ searchTerm = '', selectedCategory = 'All', onCategoryChange }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [localCategory, setLocalCategory] = useState('All');
+
+  const activeCategory = selectedCategory !== 'All' ? selectedCategory : localCategory;
 
   const categories = ['All', 'Clothes', 'Electronics', 'Furniture', 'Health', 'Beauty', 'Pets', 'Crafts', 'Fashion'];
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_URL}/api/products`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => { setProducts(d); setLoading(false); })
       .catch(() => { setError('Could not load products. Make sure the backend is running.'); setLoading(false); });
   }, []);
 
-  const filtered = activeFilter === 'All' ? products : products.filter((p) => p.category === activeFilter);
+  const handleCategorySelect = (cat) => {
+    setLocalCategory(cat);
+    if (onCategoryChange) onCategoryChange(cat);
+  };
+
+  const filtered = products.filter((p) => {
+    const matchesCategory = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.category.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   if (loading) return (
     <div className="loading-container">
@@ -149,7 +167,7 @@ function ProductGrid() {
   );
 
   return (
-    <section className="products-section">
+    <section className="products-section" id="products">
       {/* Section header */}
       <div className="section-header">
         <h2 className="section-title">Shop by Category</h2>
@@ -161,8 +179,8 @@ function ProductGrid() {
         {categories.map((cat) => (
           <button
             key={cat}
-            className={`filter-pill ${activeFilter === cat ? 'active' : ''}`}
-            onClick={() => setActiveFilter(cat)}
+            className={`filter-pill ${activeCategory === cat ? 'active' : ''}`}
+            onClick={() => handleCategorySelect(cat)}
           >
             {cat}
           </button>
@@ -170,13 +188,22 @@ function ProductGrid() {
       </div>
 
       {/* Grid */}
-      <div className="product-grid">
-        {filtered.map((product, i) => (
-          <ProductCard key={product._id} product={product} index={i} />
-        ))}
-      </div>
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#666' }}>
+          <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '2.5rem', marginBottom: '1rem', color: '#999' }} />
+          <h3>No products found</h3>
+          <p>Try searching for a different keyword or category.</p>
+        </div>
+      ) : (
+        <div className="product-grid">
+          {filtered.map((product, i) => (
+            <ProductCard key={product._id} product={product} index={i} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 export default ProductGrid;
+
