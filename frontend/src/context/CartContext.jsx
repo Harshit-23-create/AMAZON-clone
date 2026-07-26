@@ -18,13 +18,30 @@ export function CartProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product._id }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      if (text.trim().startsWith('<')) throw new Error("Received HTML");
+      const data = JSON.parse(text);
       if (res.ok) {
         setCartItems(data.cart);
         setCartOpen(true);
       }
     } catch (err) {
-      console.error('Add to cart error:', err);
+      console.warn('Add to cart fallback:', err);
+      // Fallback local cart behavior
+      setCartItems(prev => {
+        const existing = prev.find(i => i.productId === product._id);
+        if (existing) {
+          return prev.map(i => i.productId === product._id ? { ...i, quantity: i.quantity + 1 } : i);
+        }
+        return [...prev, {
+          productId: product._id,
+          quantity: 1,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
+        }];
+      });
+      setCartOpen(true);
     }
   }, []);
 
@@ -33,10 +50,13 @@ export function CartProvider({ children }) {
       const res = await fetch(`${API_URL}/api/cart/${productId}`, {
         method: 'DELETE',
       });
-      const data = await res.json();
+      const text = await res.text();
+      if (text.trim().startsWith('<')) throw new Error("Received HTML");
+      const data = JSON.parse(text);
       if (res.ok) setCartItems(data.cart);
     } catch (err) {
-      console.error('Remove from cart error:', err);
+      console.warn('Remove cart fallback:', err);
+      setCartItems(prev => prev.filter(i => i.productId !== productId));
     }
   }, []);
 
@@ -47,10 +67,17 @@ export function CartProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      if (text.trim().startsWith('<')) throw new Error("Received HTML");
+      const data = JSON.parse(text);
       if (res.ok) setCartItems(data.cart);
     } catch (err) {
-      console.error('Update cart error:', err);
+      console.warn('Update cart fallback:', err);
+      if (quantity <= 0) {
+        setCartItems(prev => prev.filter(i => i.productId !== productId));
+      } else {
+        setCartItems(prev => prev.map(i => i.productId === productId ? { ...i, quantity } : i));
+      }
     }
   }, []);
 

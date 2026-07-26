@@ -121,6 +121,17 @@ const API_URL = import.meta.env.VITE_API_URL !== undefined
   ? import.meta.env.VITE_API_URL
   : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : '');
 
+const defaultProducts = [
+  { _id: "1", name: "Men's Casual Wear", description: "Comfortable and stylish clothes for everyday use. Premium cotton blend with modern fit.", imageUrl: "box1_image.jpg", price: 29.99, category: "Clothes", rating: 4.3, reviews: 1248 },
+  { _id: "2", name: "Health & Personal Care Essentials", description: "Top health and personal care items for a healthy lifestyle. Trusted by millions.", imageUrl: "box2_image.jpg", price: 15.49, category: "Health", rating: 4.5, reviews: 3892 },
+  { _id: "3", name: "Modern Furniture", description: "Decorate your home with elegant, contemporary furniture. Built to last.", imageUrl: "box3_image.jpg", price: 120.00, category: "Furniture", rating: 4.1, reviews: 567 },
+  { _id: "4", name: "Latest Electronics", description: "Cutting-edge gadgets and electronics for the modern era. Fast and powerful.", imageUrl: "box4_image.jpg", price: 199.99, category: "Electronics", rating: 4.7, reviews: 8210 },
+  { _id: "5", name: "Beauty & Makeup Kits", description: "Premium beauty and makeup essentials. Glow up with the best.", imageUrl: "box5_image.jpg", price: 45.00, category: "Beauty", rating: 4.4, reviews: 2103 },
+  { _id: "6", name: "Pet Supplies", description: "Everything your furry friends need. Healthy, happy, and playful.", imageUrl: "box6_image.jpg", price: 25.00, category: "Pets", rating: 4.6, reviews: 987 },
+  { _id: "7", name: "Arts & Crafts", description: "Get creative with our wide range of craft supplies. Spark your imagination.", imageUrl: "box7_image.jpg", price: 18.50, category: "Crafts", rating: 4.2, reviews: 431 },
+  { _id: "8", name: "Fashion Trends", description: "Discover the latest fashion trends. Stay ahead of the curve.", imageUrl: "box8_image.jpg", price: 55.00, category: "Fashion", rating: 4.5, reviews: 1754 },
+];
+
 function ProductGrid({ searchTerm = '', selectedCategory = 'All', onCategoryChange }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,15 +144,25 @@ function ProductGrid({ searchTerm = '', selectedCategory = 'All', onCategoryChan
 
   useEffect(() => {
     fetch(`${API_URL}/api/products`)
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(async (r) => {
+        if (!r.ok) throw new Error();
+        const text = await r.text();
+        if (text.trim().startsWith('<')) throw new Error("Received HTML instead of JSON");
+        return JSON.parse(text);
+      })
       .then((d) => { setProducts(d); setLoading(false); })
-      .catch(() => { setError('Could not load products. Make sure the backend is running.'); setLoading(false); });
+      .catch((err) => { 
+        console.warn("API failed, using fallback frontend data:", err);
+        setProducts(defaultProducts); 
+        setLoading(false); 
+      });
   }, []);
 
   const handleCategorySelect = (cat) => {
     setLocalCategory(cat);
     if (onCategoryChange) onCategoryChange(cat);
   };
+
 
   const filtered = products.filter((p) => {
     const matchesCategory = activeCategory === 'All' || p.category.toLowerCase() === activeCategory.toLowerCase();
