@@ -8,3 +8,6 @@ build
 # Allow example/production templates to be committed
 !.env.example
 !.env.production
+
+.vercel
+.env*.local
