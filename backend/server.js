@@ -109,8 +109,7 @@ app.use(
 app.use(express.json());
 
 // Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get(['/health', '/api/health'], (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // Connect to MongoDB if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {
@@ -128,7 +127,7 @@ const isDbConnected = () => mongoose.connection.readyState === 1;
 // ─── PRODUCT ROUTES ────────────────────────────────────────────────────────────
 
 // GET all products
-app.get('/api/products', async (req, res) => {
+app.get(['/api/products', '/products'], async (req, res) => {
   try {
     if (isDbConnected() && Product) {
       const products = await Product.find();
@@ -143,7 +142,7 @@ app.get('/api/products', async (req, res) => {
 });
 
 // GET single product by ID
-app.get('/api/products/:id', async (req, res) => {
+app.get(['/api/products/:id', '/products/:id'], async (req, res) => {
   try {
     if (isDbConnected() && Product) {
       const product = await Product.findById(req.params.id);
@@ -163,12 +162,12 @@ app.get('/api/products/:id', async (req, res) => {
 let cart = [];
 
 // GET cart items
-app.get('/api/cart', (req, res) => {
+app.get(['/api/cart', '/cart'], (req, res) => {
   res.json(cart);
 });
 
 // POST - Add item to cart
-app.post('/api/cart', async (req, res) => {
+app.post(['/api/cart', '/cart'], async (req, res) => {
   try {
     const { productId, quantity = 1 } = req.body;
     let product = null;
@@ -201,14 +200,14 @@ app.post('/api/cart', async (req, res) => {
 });
 
 // DELETE - Remove item from cart
-app.delete('/api/cart/:productId', (req, res) => {
+app.delete(['/api/cart/:productId', '/cart/:productId'], (req, res) => {
   const { productId } = req.params;
   cart = cart.filter((item) => item.productId !== productId);
   res.json({ message: 'Removed from cart', cart });
 });
 
 // PUT - Update cart item quantity
-app.put('/api/cart/:productId', (req, res) => {
+app.put(['/api/cart/:productId', '/cart/:productId'], (req, res) => {
   const { productId } = req.params;
   const { quantity } = req.body;
   const item = cart.find((item) => item.productId === productId);
